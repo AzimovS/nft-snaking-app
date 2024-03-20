@@ -1,19 +1,14 @@
-# 🏗 Scaffold-ETH 2
+# NFT Snaking 🐍 App on 🏗 Scaffold-ETH 2
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+## About The Project
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+<p align="center">
+  <img src="assets/demo.png" alt="demo" width="75%"/>
+</p>
+
+The Snake NFT Minting and Staking App is an innovative platform where users can create, collect, and stake unique Snake-themed Non-Fungible Tokens (NFTs). With a limited supply of 100 distinct Snake NFTs, each holding its own rarity and value, users can mint personalized tokens, stake them to earn rewards, and claim special tokens over time. This engaging ecosystem fosters community interaction, allowing enthusiasts to participate in discussions, events, and activities while unlocking exclusive benefits. Join the Snake NFT community today and dive into the world of digital collectibles, where creativity meets blockchain technology.
 
 ⚙️ Built using NextJS, RainbowKit, Hardhat, Wagmi, and Typescript.
-
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
-
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/1171422a-0ce4-4203-bcd4-d2d1941d198b)
 
 ## Requirements
 
@@ -25,13 +20,13 @@ Before you begin, you need to install the following tools:
 
 ## Quickstart
 
-To get started with Scaffold-ETH 2, follow the steps below:
+To get started with NFT Snaking App, follow the steps below:
 
 1. Clone this repo & install dependencies
 
 ```
-git clone https://github.com/scaffold-eth/scaffold-eth-2.git
-cd scaffold-eth-2
+git clone https://github.com/AzimovS/nft-snaking-app.git
+cd nft-snaking-app
 yarn install
 ```
 
@@ -65,14 +60,5 @@ Run smart contract test with `yarn hardhat:test`
 - Edit your frontend in `packages/nextjs/pages`
 - Edit your deployment scripts in `packages/hardhat/deploy`
 
-## Documentation
-
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
-
-To know more about its features, check out our [website](https://scaffoldeth.io).
-
-## Contributing to Scaffold-ETH 2
-
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+## Documentation 🏗 Scaffold-ETH 2
+Here's the original [Scaffold-ETH 2 documentation](https://docs.scaffoldeth.io)
