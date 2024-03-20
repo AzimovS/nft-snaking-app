@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BigNumberish } from "ethers";
+import { BigNumberish, formatEther } from "ethers";
 import type { NextPage } from "next";
 import { Abi } from "viem";
 import {
@@ -102,6 +102,59 @@ const SingleNFTDisplay = ({
   );
 };
 
+const SingleStakedNFTDisplay = ({
+  nftId,
+  refetchUserTokens,
+  tokenContract,
+}: {
+  nftId: number;
+  refetchUserTokens: () => Promise<unknown>;
+  tokenContract: contractInfo;
+}) => {
+  const { data: rewardTokens } = useContractRead({
+    address: tokenContract.address,
+    abi: tokenContract.abi,
+    functionName: "calculateTokens",
+    args: [BigInt(nftId)],
+    watch: true,
+  });
+
+  const { config: unstakeConfig } = usePrepareContractWrite({
+    address: tokenContract.address,
+    abi: tokenContract.abi,
+    functionName: "unstake",
+    args: [BigInt(nftId)],
+  });
+  const { data: unstakeData, write: unstakeToken } = useContractWrite(unstakeConfig);
+  const { isLoading: isUnstakeLoading, isSuccess: isUnstakeSuccess } = useWaitForTransaction({
+    hash: unstakeData?.hash,
+  });
+
+  useEffect(() => {
+    if (isUnstakeSuccess) {
+      refetchUserTokens();
+      notification.success("Successfully unstaked your NFT with rewards!");
+    }
+  }, [isUnstakeSuccess, refetchUserTokens]);
+  console.log(rewardTokens);
+
+  return (
+    <div>
+      <div>
+        <img src={`${config.ipfsUri}/${nftId}.png`} alt="NFT" className="w-full rounded-md" />
+        <p className="mt-2 font-medium">Rewards: {formatEther((rewardTokens as BigNumberish) || "0")} SNK</p>
+        <button
+          className="w-full py-2 mt-2 text-white bg-red-500 rounded-md hover:opacity-90 transition-opacity"
+          onClick={unstakeToken}
+        >
+          {isUnstakeLoading && <Spinner />}
+          {!isUnstakeLoading && "Unstake & claim"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const NFTDisplay = ({
   nfts,
   refetchUserTokens,
@@ -122,6 +175,31 @@ const NFTDisplay = ({
           refetchUserTokens={refetchUserTokens}
           key={id}
           nftContract={nftContract}
+          tokenContract={tokenContract}
+        />
+      ))}
+    </div>
+  );
+};
+
+const StakedNFTDisplay = ({
+  nfts,
+  refetchUserTokens,
+  tokenContract,
+}: {
+  nfts?: readonly BigNumberish[];
+  refetchUserTokens: () => Promise<unknown>;
+  tokenContract: contractInfo;
+}) => {
+  if (!nfts || nfts.length === 0) return <p>{`You don't have any staked NFTs yet.`}</p>;
+
+  return (
+    <div className="grid md:grid-cols-4 gap-x-4 gap-y-6 grid-cols-2">
+      {nfts.map((nft, id) => (
+        <SingleStakedNFTDisplay
+          nftId={Number(nft)}
+          key={id}
+          refetchUserTokens={refetchUserTokens}
           tokenContract={tokenContract}
         />
       ))}
@@ -190,10 +268,11 @@ const Home: NextPage = () => {
                   tokenContract={tokenContract}
                 />
                 <p className="mt-5 mb-3 font-bold">Staked NFTs</p>
-                {/* <StakedNFTDisplay
-                nfts={userTokens?.[1] || []}
-                refetchUserTokens={refetchUserTokens}
-                /> */}
+                <StakedNFTDisplay
+                  nfts={(userTokens?.[1]?.["result"] as BigNumberish[]) || []}
+                  refetchUserTokens={refetchUserTokens}
+                  tokenContract={tokenContract}
+                />
               </div>
             )
           ) : null}
