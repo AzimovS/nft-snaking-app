@@ -1,9 +1,13 @@
 import React, { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { formatEther } from "ethers";
+import { useAccount } from "wagmi";
 import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { config } from "~~/config";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
+import { useScaffoldContractRead } from "~~/hooks/scaffold-eth";
 
 interface HeaderMenuLink {
   label: string;
@@ -17,7 +21,7 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/",
   },
   {
-    label: "Gallery",
+    label: "My gallery",
     href: "/gallery",
   },
   {
@@ -58,11 +62,22 @@ export const HeaderMenuLinks = () => {
  */
 export const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { address: connectedAddress, isConnected } = useAccount();
+
   const burgerMenuRef = useRef<HTMLDivElement>(null);
   useOutsideClick(
     burgerMenuRef,
     useCallback(() => setIsDrawerOpen(false), []),
   );
+
+  const { data: tokensBalance } = useScaffoldContractRead({
+    contractName: "ProjectToken",
+    functionName: "balanceOf",
+    args: [connectedAddress || "0x"],
+    watch: true,
+    enabled: isConnected,
+  });
+  console.log(tokensBalance);
 
   return (
     <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 flex-shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
@@ -91,7 +106,7 @@ export const Header = () => {
         </div>
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">NFT Staking App</span>
+            <span className="font-bold leading-tight">NFT Snaking App</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
@@ -99,7 +114,9 @@ export const Header = () => {
         </ul>
       </div>
       <div className="navbar-end flex-grow mr-4">
-        Here is STK B
+        <p className="px-3 py-2 mr-4 font-medium text-white bg-blue-500 rounded-md">
+          {formatEther(tokensBalance || "0")} {config.tokenSymbol}
+        </p>
         <RainbowKitCustomConnectButton />
         <FaucetButton />
       </div>
