@@ -1,38 +1,177 @@
+import { useEffect } from "react";
+import { BigNumberish } from "ethers";
 import type { NextPage } from "next";
-import { parseEther } from "viem";
-import { useAccount } from "wagmi";
+import { Abi } from "viem";
+import {
+  useAccount,
+  useContractRead,
+  useContractReads,
+  useContractWrite,
+  usePrepareContractWrite,
+  useWaitForTransaction,
+} from "wagmi";
 import { MetaHeader } from "~~/components/MetaHeader";
 import { Spinner } from "~~/components/assets/Spinner";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { config } from "~~/config";
-import { useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { notification } from "~~/utils/scaffold-eth";
 
-const MINT_PRICE_ETH = "0.0001";
+type contractInfo = {
+  address: string | undefined;
+  abi: Abi | undefined;
+};
+
+const SingleNFTDisplay = ({
+  nftId,
+  refetchUserTokens,
+  nftContract,
+  tokenContract,
+}: {
+  nftId: number;
+  refetchUserTokens: () => Promise<unknown>;
+  nftContract: contractInfo;
+  tokenContract: contractInfo;
+}) => {
+  const { data: approvedInfo, refetch: refetchGetApproved } = useContractRead({
+    address: nftContract.address,
+    abi: nftContract.abi,
+    functionName: "getApproved",
+    args: [BigInt(nftId)],
+  });
+
+  const { config: approveConfig } = usePrepareContractWrite({
+    address: nftContract.address,
+    abi: nftContract.abi,
+    functionName: "approve",
+    args: [tokenContract.address, BigInt(nftId)],
+  });
+  const { data: approveData, write: approveToken } = useContractWrite(approveConfig);
+  const { isLoading: isApproveLoading, isSuccess: isApproveSuccess } = useWaitForTransaction({
+    hash: approveData?.hash,
+  });
+
+  const { config: stakeConfig, refetch: refetchStakeContractWrite } = usePrepareContractWrite({
+    address: tokenContract.address,
+    abi: tokenContract.abi,
+    functionName: "stake",
+    args: [BigInt(nftId)],
+  });
+  const { data: stakeData, write: stakeToken } = useContractWrite(stakeConfig);
+  const { isLoading: isStakeLoading, isSuccess: isStakeSuccess } = useWaitForTransaction({
+    hash: stakeData?.hash,
+  });
+
+  useEffect(() => {
+    if (isApproveSuccess) {
+      refetchGetApproved();
+      refetchStakeContractWrite();
+      notification.success("Successfully approved your NFT!");
+    }
+  }, [isApproveSuccess, refetchGetApproved, refetchStakeContractWrite]);
+
+  useEffect(() => {
+    if (isStakeSuccess) {
+      refetchUserTokens();
+      notification.success("Successfully staked your NFT!");
+    }
+  }, [isStakeSuccess, refetchUserTokens]);
+
+  return (
+    <div>
+      <div>
+        <img src={`${config.ipfsUri}/${nftId}.png`} alt="NFT" className="w-full rounded-md" />
+        {!approvedInfo || !(approvedInfo === tokenContract.address) ? (
+          <button
+            className="w-full py-2 mt-3 text-white bg-blue-500 rounded-md hover:opacity-90 transition-opacity"
+            onClick={approveToken}
+          >
+            {isApproveLoading && <Spinner />}
+            {!isApproveLoading && "Approve"}
+          </button>
+        ) : (
+          <button
+            className="w-full py-2 mt-3 text-white bg-green-500 rounded-md hover:opacity-90 transition-opacity"
+            onClick={stakeToken}
+          >
+            {isStakeLoading && <Spinner />}
+            {!isStakeLoading && "Stake"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const NFTDisplay = ({
+  nfts,
+  refetchUserTokens,
+  tokenContract,
+  nftContract,
+}: {
+  nfts: readonly BigNumberish[];
+  refetchUserTokens: () => Promise<unknown>;
+  nftContract: contractInfo;
+  tokenContract: contractInfo;
+}) => {
+  if (nfts.length === 0) return <p>{`You don't have any NFTs yet.`}</p>;
+  return (
+    <div className="grid md:grid-cols-4 gap-x-4 gap-y-6 grid-cols-2">
+      {nfts?.map((nft, id) => (
+        <SingleNFTDisplay
+          nftId={Number(nft)}
+          refetchUserTokens={refetchUserTokens}
+          key={id}
+          nftContract={nftContract}
+          tokenContract={tokenContract}
+        />
+      ))}
+    </div>
+  );
+};
 
 const Home: NextPage = () => {
-  const { address: connectedAddress, isConnected, isConnecting } = useAccount();
+  const { address: connectedAddress, isConnected } = useAccount();
+  const { data: contractDataNFT } = useDeployedContractInfo("NFT");
+  const { data: contractDataToken } = useDeployedContractInfo("ProjectToken");
 
-  const { data: totalSupply, isLoading: isUserTokenLoading } = useScaffoldContractRead({
-    contractName: "ProjectToken",
-    functionName: "getHolderTokens",
-    args: [connectedAddress],
-  });
+  const nftContract: contractInfo = {
+    address: contractDataNFT?.address,
+    abi: contractDataNFT?.abi,
+  };
 
-  const { writeAsync: mintItem } = useScaffoldContractWrite({
-    contractName: "NFT",
-    functionName: "safeMint",
-    args: [connectedAddress],
-    value: parseEther("0.1"),
+  const tokenContract = {
+    address: contractDataToken?.address,
+    abi: contractDataToken?.abi,
+  };
+
+  const {
+    data: userTokens,
+    isLoading: isUserTokenLoading,
+    refetch: refetchUserTokens,
+  } = useContractReads({
+    contracts: [
+      {
+        address: nftContract.address,
+        abi: nftContract.abi,
+        functionName: "getUserTokens",
+        args: [connectedAddress || "0x"],
+      },
+      {
+        address: tokenContract.address,
+        abi: tokenContract.abi,
+        functionName: "getHolderTokens",
+        args: [connectedAddress || "0x"],
+      },
+    ],
   });
-  const nftId = totalSupply !== undefined && parseInt(totalSupply.toString()) + 1;
 
   return (
     <>
       <MetaHeader />
       <div className="flex items-center flex-col flex-grow pt-10">
         <div className="px-5">
-          <h1 className="text-center mb-8">
-            <span className="block text-2xl mb-2">NFT Staking App</span>
+          <h1 className="text-center">
+            <span className="block text-2xl">NFT Snaking App</span>
           </h1>
         </div>
 
@@ -44,44 +183,18 @@ const Home: NextPage = () => {
             ) : (
               <div>
                 <p className="mb-3 font-bold">My NFTs</p>
-                {/* <NFTDisplay
-                nfts={userTokens?.[0] || []}
-                refetchUserTokens={refetchUserTokens}
-                /> */}
+                <NFTDisplay
+                  nfts={(userTokens?.[0]?.["result"] as BigNumberish[]) || []}
+                  refetchUserTokens={refetchUserTokens}
+                  nftContract={nftContract}
+                  tokenContract={tokenContract}
+                />
                 <p className="mt-5 mb-3 font-bold">Staked NFTs</p>
                 {/* <StakedNFTDisplay
                 nfts={userTokens?.[1] || []}
                 refetchUserTokens={refetchUserTokens}
                 /> */}
               </div>
-            )
-          ) : null}
-        </div>
-
-        <div className="flex justify-center">
-          {nftId ? (
-            nftId < config.maxSupply ? (
-              <div>
-                <p>You are about to mint the following NFT: </p>
-                <img src={`${config.ipfsUri}/${nftId}.png`} alt="NFT" className="mt-3 w-44 rounded-md" />
-                <div className="mt-0">
-                  <p className="mb-0">
-                    Price: <b>{MINT_PRICE_ETH} ETH</b>
-                  </p>
-                  <p className="mt-0">
-                    ID: <b>{nftId}</b>
-                  </p>
-                  {!isConnected || isConnecting ? (
-                    <RainbowKitCustomConnectButton />
-                  ) : (
-                    <button className="btn btn-secondary" onClick={() => mintItem()}>
-                      Mint NFT
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p>Out of stock</p>
             )
           ) : null}
         </div>
