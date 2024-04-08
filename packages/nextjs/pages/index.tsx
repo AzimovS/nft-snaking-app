@@ -6,7 +6,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { config } from "~~/config";
 import { useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
 
-const MINT_PRICE_ETH = "0.0001";
+const MINT_PRICE_ETH = "0.001";
 
 const Home: NextPage = () => {
   const { address: connectedAddress, isConnected, isConnecting } = useAccount();
@@ -22,7 +22,7 @@ const Home: NextPage = () => {
     contractName: "NFT",
     functionName: "safeMint",
     args: [connectedAddress],
-    value: parseEther("0.1"),
+    value: parseEther("0.001"),
   });
   const nftId = totalSupply !== undefined && parseInt(totalSupply.toString()) + 1;
 
